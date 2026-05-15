@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  avatar    String   @default("")
+  isOnline  Boolean  @default(false)
+  lastSeen  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  chats         ChatMember[]
+  adminOf       Chat[]          @relation("GroupAdmin")
+  messages      Message[]
+  readMessages  MessageReadBy[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Chat {
+  id              String   @id @default(cuid())
+  isGroupChat     Boolean  @default(false)
+  groupName       String?
+  groupAvatar     String   @default("")
+  groupAdminId    String?
+  latestMessageId String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  groupAdmin    User?        @relation("GroupAdmin", fields: [groupAdminId], references: [id])
+  members       ChatMember[]
+  messages      Message[]    @relation("ChatMessages")
+  latestMessage Message?     @relation("LatestMessage", fields: [latestMessageId], references: [id])
+}
+
+model ChatMember {
+  chatId String
+  userId String
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([chatId, userId])
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  senderId  String
+  chatId    String
+  content   String?     @db.Text
+  type      MessageType @default(TEXT)
+  fileUrl   String      @default("")
+  fileName  String      @default("")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  sender    User            @relation(fields: [senderId], references: [id])
+  chat      Chat            @relation("ChatMessages", fields: [chatId], references: [id], onDelete: Cascade)
+  readBy    MessageReadBy[]
+  latestFor Chat?           @relation("LatestMessage")
+}
+
+model MessageReadBy {
+  messageId String
+  userId    String
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId])
+}

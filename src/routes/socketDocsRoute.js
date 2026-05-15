@@ -33,6 +33,8 @@ router.get('/', (req, res) => {
     .badge-blue { background: #1e40af22; color: #60a5fa; border: 1px solid #1e40af55; }
     .badge-green { background: #16653422; color: #4ade80; border: 1px solid #16653455; }
     .badge-purple { background: #7c3aed22; color: #c4b5fd; border: 1px solid #7c3aed55; }
+    .badge-orange { background: #ea580c22; color: #fb923c; border: 1px solid #ea580c55; }
+    .badge-red    { background: #dc262622; color: #f87171; border: 1px solid #dc262655; }
 
     section { margin-bottom: 48px; }
 
@@ -81,7 +83,7 @@ router.get('/', (req, res) => {
     <path d="M8 20l6-12 4 8 3-5 3 9" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
   <div>
-    <h1>Socket.io Events &nbsp;<span>v1.0</span></h1>
+    <h1>Socket.io Events &nbsp;<span>v2.0</span></h1>
     <div class="subtitle">Real-time events reference for the Chat Application</div>
   </div>
 </header>
@@ -205,6 +207,146 @@ socket.<span class="fn">on</span>(<span class="str">'connect_error'</span>, (err
         </div>
       </div>
 
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">delete_message</span>
+          <span class="direction-badge dir-emit">emit</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Delete a message you sent. The server verifies ownership, deletes from DB, then broadcasts <code>message_deleted</code> to the entire chat room. Only the original sender can delete.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ messageId: string }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">emit</span>(<span class="ev">'delete_message'</span>, { messageId });</code></pre>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Call Signaling Client → Server -->
+  <section>
+    <h2><span class="badge badge-orange">Client → Server</span> Voice &amp; Video Call Signaling (WebRTC)</h2>
+    <div class="event-grid">
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:initiate</span>
+          <span class="direction-badge dir-emit">emit</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Step 1 — Notify the target user about an incoming call before sending the WebRTC offer. The callee receives <code>call:incoming</code>.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ targetUserId: string, callType: "audio" | "video" }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">emit</span>(<span class="ev">'call:initiate'</span>, {
+  targetUserId,
+  callType: <span class="str">'video'</span>,
+});</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:offer</span>
+          <span class="direction-badge dir-emit">emit</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Step 2 — Caller sends the WebRTC SDP offer to the callee after creating a peer connection. The callee receives <code>call:offer</code>.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ targetUserId: string, offer: RTCSessionDescription }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">emit</span>(<span class="ev">'call:offer'</span>, { targetUserId, offer });</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:answer</span>
+          <span class="direction-badge dir-emit">emit</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Step 3 — Callee sends SDP answer back to the caller after accepting. The caller receives <code>call:answer</code>.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ targetUserId: string, answer: RTCSessionDescription }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">emit</span>(<span class="ev">'call:answer'</span>, { targetUserId, answer });</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:ice-candidate</span>
+          <span class="direction-badge dir-emit">emit</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Step 4 — Both caller and callee continuously send ICE candidates as they are discovered. These are forwarded to the other peer to establish the best network path.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ targetUserId: string, candidate: RTCIceCandidate }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">emit</span>(<span class="ev">'call:ice-candidate'</span>, {
+  targetUserId,
+  candidate,
+});</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:reject</span>
+          <span class="direction-badge dir-emit">emit</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Callee declines the incoming call. The caller receives <code>call:rejected</code> and should stop ringing and close the peer connection.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ targetUserId: string }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">emit</span>(<span class="ev">'call:reject'</span>, { targetUserId });</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:end</span>
+          <span class="direction-badge dir-emit">emit</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Either side hangs up during or after a connected call. The other peer receives <code>call:ended</code> and should close the peer connection and stop media streams.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ targetUserId: string }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">emit</span>(<span class="ev">'call:end'</span>, { targetUserId });</code></pre>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -323,6 +465,180 @@ socket.<span class="fn">on</span>(<span class="str">'connect_error'</span>, (err
         </div>
       </div>
 
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">message_deleted</span>
+          <span class="direction-badge dir-on">on</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">A message in the chat room was deleted by its sender. Remove the message from the UI immediately. Can also be triggered via <code>DELETE /api/messages/:messageId</code>.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ messageId: string, chatId: string }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">on</span>(<span class="ev">'message_deleted'</span>, ({ messageId, chatId }) =&gt; {
+  <span class="cm">// remove message from list by messageId</span>
+});</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">error</span>
+          <span class="direction-badge dir-on">on</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Sent back to the emitting client when a socket action fails (e.g. deleting a message you didn't send, or message not found).</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ message: string }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">on</span>(<span class="ev">'error'</span>, ({ message }) =&gt; {
+  <span class="cm">// show error toast</span>
+});</code></pre>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Call Signaling Server → Client -->
+  <section>
+    <h2><span class="badge badge-red">Server → Client</span> Voice &amp; Video Call Events</h2>
+    <div class="event-grid">
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:incoming</span>
+          <span class="direction-badge dir-on">on</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Someone is calling you. Show an incoming call screen with accept/reject buttons. After accepting, create an <code>RTCPeerConnection</code> and wait for <code>call:offer</code>.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ callerId: string, callerName: string, callType: "audio" | "video" }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">on</span>(<span class="ev">'call:incoming'</span>, ({ callerId, callerName, callType }) =&gt; {
+  <span class="cm">// show incoming call UI</span>
+});</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:offer</span>
+          <span class="direction-badge dir-on">on</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Received by the callee. Set as remote description on your <code>RTCPeerConnection</code>, then create an answer and emit <code>call:answer</code>.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ callerId: string, offer: RTCSessionDescription }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">on</span>(<span class="ev">'call:offer'</span>, async ({ callerId, offer }) =&gt; {
+  await pc.<span class="fn">setRemoteDescription</span>(offer);
+  <span class="kw">const</span> answer = await pc.<span class="fn">createAnswer</span>();
+  await pc.<span class="fn">setLocalDescription</span>(answer);
+  socket.<span class="fn">emit</span>(<span class="ev">'call:answer'</span>, { targetUserId: callerId, answer });
+});</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:answer</span>
+          <span class="direction-badge dir-on">on</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Received by the caller. Set as remote description to complete the WebRTC handshake. After this, ICE candidates are exchanged and media flows.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ calleeId: string, answer: RTCSessionDescription }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">on</span>(<span class="ev">'call:answer'</span>, async ({ answer }) =&gt; {
+  await pc.<span class="fn">setRemoteDescription</span>(answer);
+});</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:ice-candidate</span>
+          <span class="direction-badge dir-on">on</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">An ICE candidate from the other peer. Add it to your peer connection to help establish the best network route. Both sides receive this.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ from: string, candidate: RTCIceCandidate }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">on</span>(<span class="ev">'call:ice-candidate'</span>, async ({ candidate }) =&gt; {
+  await pc.<span class="fn">addIceCandidate</span>(candidate);
+});</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:rejected</span>
+          <span class="direction-badge dir-on">on</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">Received by the caller when the callee rejects the call. Stop the ringing tone and close the peer connection.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ by: string }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">on</span>(<span class="ev">'call:rejected'</span>, ({ by }) =&gt; {
+  <span class="cm">// stop ringing, show "Call declined"</span>
+  pc.<span class="fn">close</span>();
+});</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-card-header">
+          <span class="event-name">call:ended</span>
+          <span class="direction-badge dir-on">on</span>
+        </div>
+        <div class="event-card-body">
+          <div>
+            <label>Description</label>
+            <p class="event-desc">The other party hung up. Close the peer connection, stop all media tracks, and return to the chat UI.</p>
+          </div>
+          <div>
+            <label>Payload</label>
+            <div class="payload-type">{ by: string }</div>
+            <pre style="margin-top:8px"><code>socket.<span class="fn">on</span>(<span class="ev">'call:ended'</span>, ({ by }) =&gt; {
+  pc.<span class="fn">close</span>();
+  localStream.getTracks().<span class="fn">forEach</span>(t =&gt; t.<span class="fn">stop</span>());
+  <span class="cm">// return to chat UI</span>
+});</code></pre>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -362,19 +678,40 @@ socket.<span class="fn">on</span>(<span class="str">'connect'</span>, () =&gt; {
 socket.<span class="fn">on</span>(<span class="str">'connect_error'</span>, (err) =&gt; console.<span class="fn">error</span>(err.message));
 socket.<span class="fn">on</span>(<span class="str">'disconnect'</span>, () =&gt; console.<span class="fn">log</span>(<span class="str">'disconnected'</span>));
 
-<span class="cm">// Incoming events</span>
-socket.<span class="fn">on</span>(<span class="ev">'message_received'</span>,  (msg)                       =&gt; appendMessage(msg));
-socket.<span class="fn">on</span>(<span class="ev">'typing'</span>,            ({ chatId, userId })          =&gt; showTyping(userId));
-socket.<span class="fn">on</span>(<span class="ev">'stop_typing'</span>,       ({ chatId, userId })          =&gt; hideTyping(userId));
-socket.<span class="fn">on</span>(<span class="ev">'read_receipt'</span>,      ({ chatId, userId })          =&gt; markRead(chatId, userId));
+<span class="cm">// ── Chat events ──────────────────────────────────────────────────────</span>
+socket.<span class="fn">on</span>(<span class="ev">'message_received'</span>,  (msg)                          =&gt; appendMessage(msg));
+socket.<span class="fn">on</span>(<span class="ev">'message_deleted'</span>,   ({ messageId })                =&gt; removeMessage(messageId));
+socket.<span class="fn">on</span>(<span class="ev">'typing'</span>,            ({ chatId, userId })            =&gt; showTyping(userId));
+socket.<span class="fn">on</span>(<span class="ev">'stop_typing'</span>,       ({ chatId, userId })            =&gt; hideTyping(userId));
+socket.<span class="fn">on</span>(<span class="ev">'read_receipt'</span>,      ({ chatId, userId })            =&gt; markRead(chatId, userId));
 socket.<span class="fn">on</span>(<span class="ev">'online_status'</span>,     ({ userId, isOnline, lastSeen }) =&gt; updatePresence(userId, isOnline));
+socket.<span class="fn">on</span>(<span class="ev">'error'</span>,             ({ message })                  =&gt; showToast(message));
 
-<span class="cm">// Outgoing events</span>
-<span class="kw">function</span> <span class="fn">joinChat</span>(chatId)  { socket.<span class="fn">emit</span>(<span class="ev">'join_chat'</span>,   chatId); }
-<span class="kw">function</span> <span class="fn">leaveChat</span>(chatId) { socket.<span class="fn">emit</span>(<span class="ev">'leave_chat'</span>,  chatId); }
-<span class="kw">function</span> <span class="fn">sendTyping</span>(chatId){ socket.<span class="fn">emit</span>(<span class="ev">'typing'</span>,      chatId); }
-<span class="kw">function</span> <span class="fn">stopTyping</span>(chatId){ socket.<span class="fn">emit</span>(<span class="ev">'stop_typing'</span>, chatId); }
-<span class="kw">function</span> <span class="fn">markAsRead</span>(chatId){ socket.<span class="fn">emit</span>(<span class="ev">'mark_read'</span>,   { chatId }); }</code></pre>
+<span class="cm">// ── Call events ───────────────────────────────────────────────────────</span>
+socket.<span class="fn">on</span>(<span class="ev">'call:incoming'</span>,     ({ callerId, callerName, callType }) =&gt; showIncomingCall(callerId, callType));
+socket.<span class="fn">on</span>(<span class="ev">'call:offer'</span>,        async ({ offer })               =&gt; { await pc.<span class="fn">setRemoteDescription</span>(offer); });
+socket.<span class="fn">on</span>(<span class="ev">'call:answer'</span>,       async ({ answer })              =&gt; { await pc.<span class="fn">setRemoteDescription</span>(answer); });
+socket.<span class="fn">on</span>(<span class="ev">'call:ice-candidate'</span>,async ({ candidate })           =&gt; { await pc.<span class="fn">addIceCandidate</span>(candidate); });
+socket.<span class="fn">on</span>(<span class="ev">'call:rejected'</span>,     ({ by })                       =&gt; endCall(<span class="str">'declined'</span>));
+socket.<span class="fn">on</span>(<span class="ev">'call:ended'</span>,        ({ by })                       =&gt; endCall(<span class="str">'ended'</span>));
+
+<span class="cm">// ── Outgoing chat ─────────────────────────────────────────────────────</span>
+<span class="kw">function</span> <span class="fn">joinChat</span>(chatId)       { socket.<span class="fn">emit</span>(<span class="ev">'join_chat'</span>,      chatId); }
+<span class="kw">function</span> <span class="fn">leaveChat</span>(chatId)      { socket.<span class="fn">emit</span>(<span class="ev">'leave_chat'</span>,     chatId); }
+<span class="kw">function</span> <span class="fn">sendTyping</span>(chatId)     { socket.<span class="fn">emit</span>(<span class="ev">'typing'</span>,         chatId); }
+<span class="kw">function</span> <span class="fn">stopTyping</span>(chatId)     { socket.<span class="fn">emit</span>(<span class="ev">'stop_typing'</span>,    chatId); }
+<span class="kw">function</span> <span class="fn">markAsRead</span>(chatId)     { socket.<span class="fn">emit</span>(<span class="ev">'mark_read'</span>,      { chatId }); }
+<span class="kw">function</span> <span class="fn">deleteMessage</span>(messageId){ socket.<span class="fn">emit</span>(<span class="ev">'delete_message'</span>,{ messageId }); }
+
+<span class="cm">// ── Outgoing call ─────────────────────────────────────────────────────</span>
+<span class="kw">function</span> <span class="fn">startCall</span>(targetUserId, callType) {
+  socket.<span class="fn">emit</span>(<span class="ev">'call:initiate'</span>, { targetUserId, callType });
+}
+<span class="kw">function</span> <span class="fn">sendOffer</span>(targetUserId, offer)     { socket.<span class="fn">emit</span>(<span class="ev">'call:offer'</span>,         { targetUserId, offer }); }
+<span class="kw">function</span> <span class="fn">sendAnswer</span>(targetUserId, answer)   { socket.<span class="fn">emit</span>(<span class="ev">'call:answer'</span>,        { targetUserId, answer }); }
+<span class="kw">function</span> <span class="fn">sendIce</span>(targetUserId, candidate)   { socket.<span class="fn">emit</span>(<span class="ev">'call:ice-candidate'</span>, { targetUserId, candidate }); }
+<span class="kw">function</span> <span class="fn">rejectCall</span>(targetUserId)           { socket.<span class="fn">emit</span>(<span class="ev">'call:reject'</span>,        { targetUserId }); }
+<span class="kw">function</span> <span class="fn">endCall</span>(targetUserId)             { socket.<span class="fn">emit</span>(<span class="ev">'call:end'</span>,           { targetUserId }); }</code></pre>
     </div>
   </section>
 </div>

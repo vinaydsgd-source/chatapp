@@ -13,9 +13,10 @@ const initSocket = (httpServer) => {
   return io;
 };
 
-const getIO = () => {
-  if (!io) throw new Error('Socket.io not initialized');
-  return io;
-};
+/**
+ * Returns the Socket.io instance, or null in serverless mode.
+ * Callers must guard: const io = getIO(); if (io) io.emit(...)
+ */
+const getIO = () => io || null;
 
 module.exports = { initSocket, getIO };

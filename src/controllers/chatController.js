@@ -1,20 +1,7 @@
 const prisma = require('../config/db');
-
-const CHAT_INCLUDE = {
-  members: {
-    include: {
-      user: {
-        select: { id: true, name: true, email: true, avatar: true, isOnline: true, lastSeen: true },
-      },
-    },
-  },
-  groupAdmin: {
-    select: { id: true, name: true, email: true, avatar: true },
-  },
-  latestMessage: {
-    include: { sender: { select: { name: true, avatar: true } } },
-  },
-};
+const { ok, created, badRequest, forbidden, notFound, conflict } = require('../utils/apiResponse');
+const { CHAT } = require('../constants/messages');
+const { CHAT_INCLUDE } = require('../constants');
 
 // Flatten ChatMember join table so response has members as User[]
 const formatChat = (chat) => ({
@@ -27,13 +14,8 @@ const accessChat = async (req, res, next) => {
   try {
     const { userId } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ message: 'userId is required' });
-    }
-
-    if (userId === req.user.id) {
-      return res.status(400).json({ message: 'Cannot create a chat with yourself' });
-    }
+    if (!userId) return badRequest(res, CHAT.USER_ID_REQUIRED);
+    if (userId === req.user.id) return badRequest(res, CHAT.SELF_CHAT);
 
     let chat = await prisma.chat.findFirst({
       where: {
@@ -58,13 +40,13 @@ const accessChat = async (req, res, next) => {
       });
     }
 
-    res.status(200).json({ chat: formatChat(chat) });
+    return ok(res, { chat: formatChat(chat) });
   } catch (error) {
     next(error);
   }
 };
 
-// GET /api/chats  — get all chats for logged-in user
+// GET /api/chats  — get all chats for logged-in user (sidebar / inbox)
 const getMyChats = async (req, res, next) => {
   try {
     const chats = await prisma.chat.findMany({
@@ -73,7 +55,29 @@ const getMyChats = async (req, res, next) => {
       orderBy: { updatedAt: 'desc' },
     });
 
-    res.status(200).json({ chats: chats.map(formatChat) });
+    const formattedChats = chats.map(formatChat);
+
+    // Enrich each chat with unreadCount + chatWith (parallel, avoids N+1 waterfall)
+    const enriched = await Promise.all(
+      formattedChats.map(async (chat) => {
+        const unreadCount = await prisma.message.count({
+          where: {
+            chatId: chat.id,
+            senderId: { not: req.user.id },                          // ignore own messages
+            NOT: { readBy: { some: { userId: req.user.id } } },     // not yet read by me
+          },
+        });
+
+        // For 1-1 chats expose the other participant directly
+        const chatWith = chat.isGroupChat
+          ? null
+          : chat.members.find((m) => m.id !== req.user.id) ?? null;
+
+        return { ...chat, unreadCount, chatWith };
+      })
+    );
+
+    res.status(200).json({ chats: enriched });
   } catch (error) {
     next(error);
   }
@@ -85,7 +89,7 @@ const createGroup = async (req, res, next) => {
     const { groupName, members } = req.body;
 
     if (!groupName || !members || members.length < 2) {
-      return res.status(400).json({ message: 'groupName and at least 2 members are required' });
+      return badRequest(res, CHAT.GROUP_NAME_MEMBERS_REQUIRED);
     }
 
     const allMemberIds = [...new Set([...members, req.user.id])];
@@ -102,7 +106,7 @@ const createGroup = async (req, res, next) => {
       include: CHAT_INCLUDE,
     });
 
-    res.status(201).json({ chat: formatChat(chat) });
+    return created(res, { chat: formatChat(chat) });
   } catch (error) {
     next(error);
   }
@@ -114,20 +118,13 @@ const addMember = async (req, res, next) => {
     const { chatId, userId } = req.body;
 
     const chat = await prisma.chat.findUnique({ where: { id: chatId } });
-    if (!chat || !chat.isGroupChat) {
-      return res.status(404).json({ message: 'Group chat not found' });
-    }
-
-    if (chat.groupAdminId !== req.user.id) {
-      return res.status(403).json({ message: 'Only the group admin can add members' });
-    }
+    if (!chat || !chat.isGroupChat) return notFound(res, CHAT.GROUP_NOT_FOUND);
+    if (chat.groupAdminId !== req.user.id) return forbidden(res, CHAT.ADMIN_ONLY_ADD);
 
     const existing = await prisma.chatMember.findUnique({
       where: { chatId_userId: { chatId, userId } },
     });
-    if (existing) {
-      return res.status(400).json({ message: 'User is already a member' });
-    }
+    if (existing) return conflict(res, CHAT.ALREADY_MEMBER);
 
     const updatedChat = await prisma.chat.update({
       where: { id: chatId },
@@ -135,7 +132,7 @@ const addMember = async (req, res, next) => {
       include: CHAT_INCLUDE,
     });
 
-    res.status(200).json({ chat: formatChat(updatedChat) });
+    return ok(res, { chat: formatChat(updatedChat) });
   } catch (error) {
     next(error);
   }
@@ -147,17 +144,9 @@ const removeMember = async (req, res, next) => {
     const { chatId, userId } = req.body;
 
     const chat = await prisma.chat.findUnique({ where: { id: chatId } });
-    if (!chat || !chat.isGroupChat) {
-      return res.status(404).json({ message: 'Group chat not found' });
-    }
-
-    if (chat.groupAdminId !== req.user.id) {
-      return res.status(403).json({ message: 'Only the group admin can remove members' });
-    }
-
-    if (chat.groupAdminId === userId) {
-      return res.status(400).json({ message: 'Cannot remove the group admin' });
-    }
+    if (!chat || !chat.isGroupChat) return notFound(res, CHAT.GROUP_NOT_FOUND);
+    if (chat.groupAdminId !== req.user.id) return forbidden(res, CHAT.ADMIN_ONLY_REMOVE);
+    if (chat.groupAdminId === userId) return badRequest(res, CHAT.CANNOT_REMOVE_ADMIN);
 
     const updatedChat = await prisma.chat.update({
       where: { id: chatId },
@@ -165,7 +154,7 @@ const removeMember = async (req, res, next) => {
       include: CHAT_INCLUDE,
     });
 
-    res.status(200).json({ chat: formatChat(updatedChat) });
+    return ok(res, { chat: formatChat(updatedChat) });
   } catch (error) {
     next(error);
   }

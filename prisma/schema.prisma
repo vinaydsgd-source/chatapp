@@ -8,21 +8,24 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  avatar    String   @default("")
-  isOnline  Boolean  @default(false)
-  lastSeen  DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  password          String
+  avatar            String    @default("")
+  isOnline          Boolean   @default(false)
+  lastSeen          DateTime  @default(now())
+  resetToken        String?   @db.VarChar(512)
+  resetTokenExpiry  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   refreshTokens RefreshToken[]
   chats         ChatMember[]
   adminOf       Chat[]          @relation("GroupAdmin")
   messages      Message[]
   readMessages  MessageReadBy[]
+  uploads       Upload[]
 }
 
 model RefreshToken {
@@ -91,4 +94,16 @@ model MessageReadBy {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([messageId, userId])
+}
+
+model Upload {
+  id        String   @id @default(cuid())
+  url       String
+  publicId  String   @unique
+  format    String?
+  bytes     Int?
+  userId    String?
+  createdAt DateTime @default(now())
+
+  uploadedBy User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 }

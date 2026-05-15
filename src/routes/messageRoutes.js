@@ -63,7 +63,15 @@ router.post('/', upload.single('file'), sendMessage);
  * @swagger
  * /api/messages/{chatId}:
  *   get:
- *     summary: Get all messages in a chat
+ *     summary: Get messages for a chat (paginated) — call on chat open
+ *     description: |
+ *       Call this when the user clicks/opens a chat. Returns the latest messages
+ *       and **automatically marks all unread messages as read** (emits `read_receipt` via socket).
+ *
+ *       **Pagination (infinite scroll / load more):**
+ *       - First load: `GET /api/messages/:chatId` — returns the latest 50 messages
+ *       - Load older: `GET /api/messages/:chatId?cursor=<nextCursor>` — returns 50 messages before the cursor
+ *       - Stop loading when `hasMore` is `false`
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
@@ -73,11 +81,25 @@ router.post('/', upload.single('file'), sendMessage);
  *         required: true
  *         schema:
  *           type: string
- *         description: ID of the chat
  *         example: clx2chat456
+ *       - in: query
+ *         name: cursor
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Message ID to paginate backwards from (use `nextCursor` from previous response)
+ *         example: clx3msg001
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           maximum: 100
+ *         description: Number of messages to return (max 100)
  *     responses:
  *       200:
- *         description: List of messages ordered oldest → newest
+ *         description: Paginated messages, oldest → newest. Unread messages are auto-marked as read.
  *         content:
  *           application/json:
  *             schema:
@@ -87,6 +109,15 @@ router.post('/', upload.single('file'), sendMessage);
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Message'
+ *                 hasMore:
+ *                   type: boolean
+ *                   description: True if older messages exist — use nextCursor to fetch them
+ *                   example: true
+ *                 nextCursor:
+ *                   type: string
+ *                   nullable: true
+ *                   description: Pass as `cursor` in the next request to load older messages
+ *                   example: clx3msg001
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       404:

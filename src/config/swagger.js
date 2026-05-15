@@ -7,12 +7,17 @@ const options = {
       title: 'Chat Application API',
       version: '1.0.0',
       description:
-        'REST API for a real-time chat application built with Express.js, MySQL (Prisma), and Socket.io.',
+        'REST API for a real-time chat application built with Express.js, MySQL (Prisma), and Socket.io.\n\n' +
+        '**Socket.io events reference:** [`/api/socket-docs`](/api/socket-docs)',
     },
     servers: [
       {
+        url: `http://${process.env.SERVER_IP || 'localhost'}:${process.env.PORT || 5000}`,
+        description: 'Network (share with team)',
+      },
+      {
         url: `http://localhost:${process.env.PORT || 5000}`,
-        description: 'Development server',
+        description: 'Local',
       },
     ],
     components: {
@@ -40,6 +45,7 @@ const options = {
         AuthResponse: {
           type: 'object',
           properties: {
+            message: { type: 'string', example: 'Login successful' },
             accessToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
             user: { $ref: '#/components/schemas/User' },
           },
@@ -57,6 +63,16 @@ const options = {
               items: { $ref: '#/components/schemas/User' },
             },
             latestMessage: { $ref: '#/components/schemas/Message' },
+            unreadCount: {
+              type: 'integer',
+              example: 3,
+              description: 'Number of unread messages in this chat for the logged-in user',
+            },
+            chatWith: {
+              allOf: [{ $ref: '#/components/schemas/User' }],
+              nullable: true,
+              description: 'For 1-1 chats: the other participant. Null for group chats.',
+            },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
           },
@@ -85,6 +101,17 @@ const options = {
           type: 'object',
           properties: {
             message: { type: 'string', example: 'An error occurred' },
+          },
+        },
+        Upload: {
+          type: 'object',
+          properties: {
+            id:        { type: 'string', example: 'clx9up1234' },
+            url:       { type: 'string', example: 'https://res.cloudinary.com/diuwgxbe4/image/upload/v1/chat-app/uploads/sample.jpg' },
+            publicId:  { type: 'string', example: 'chat-app/uploads/sample' },
+            format:    { type: 'string', example: 'jpg' },
+            bytes:     { type: 'integer', example: 204800 },
+            createdAt: { type: 'string', format: 'date-time' },
           },
         },
       },

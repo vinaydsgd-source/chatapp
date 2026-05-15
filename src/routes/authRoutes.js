@@ -1,5 +1,5 @@
 const express = require('express');
-const { signup, login, logout, refreshToken } = require('../controllers/authController');
+const { signup, login, logout, refreshToken, forgotPassword, resetPassword } = require('../controllers/authController');
 
 const router = express.Router();
 
@@ -129,5 +129,86 @@ router.post('/logout', logout);
  *         $ref: '#/components/responses/Unauthorized'
  */
 router.post('/refresh-token', refreshToken);
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Request a password reset token
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: john@example.com
+ *     responses:
+ *       200:
+ *         description: Reset token generated (in production this would be emailed)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 resetToken:
+ *                   type: string
+ *                   description: Plain reset token — send to /reset-password
+ *                 resetUrl:
+ *                   type: string
+ *                   description: Full URL for the frontend reset page
+ *                 expiresIn:
+ *                   type: string
+ *                   example: 1 hour
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ */
+router.post('/forgot-password', forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password using the token from forgot-password
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, newPassword]
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Plain reset token received from forgot-password response
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: newSecret123
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Password reset successful. Please login with your new password.
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ */
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

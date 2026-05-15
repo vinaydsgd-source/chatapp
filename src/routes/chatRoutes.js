@@ -54,13 +54,25 @@ router.use(protect);
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *   get:
- *     summary: Get all chats for the logged-in user
+ *     summary: Get all chats for the logged-in user (sidebar / inbox)
+ *     description: |
+ *       Call this immediately after login to populate the chat sidebar.
+ *       Returns all 1-1 conversations and group chats the user is a member of,
+ *       sorted by most recent activity.
+ *
+ *       Each chat includes:
+ *       - `unreadCount` — badge count of messages not yet read by this user
+ *       - `chatWith` — the other participant's profile (only for 1-1 chats, null for groups)
+ *       - `latestMessage` — preview of the last message
+ *
+ *       **Socket.io**: After receiving this list, emit `join_chat` for each chat ID
+ *       to start receiving real-time events.
  *     tags: [Chats]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of chats sorted by last activity
+ *         description: Chat list sorted by last activity
  *         content:
  *           application/json:
  *             schema:

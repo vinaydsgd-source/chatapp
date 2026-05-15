@@ -7,10 +7,15 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadToCloudinary = (fileBuffer, folder = 'chat-app') => {
+/**
+ * @param {Buffer} fileBuffer
+ * @param {string} folder
+ * @param {'image'|'raw'|'video'} resourceType  'image' for photos, 'raw' for documents/PDFs
+ */
+const uploadToCloudinary = (fileBuffer, folder = 'chat-app', resourceType = 'image') => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      { folder, resource_type: 'auto' },
+      { folder, resource_type: resourceType },
       (error, result) => {
         if (error) return reject(error);
         resolve(result);

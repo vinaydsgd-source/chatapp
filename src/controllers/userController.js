@@ -1,20 +1,12 @@
 const prisma = require('../config/db');
-
-const USER_SELECT = {
-  id: true,
-  name: true,
-  email: true,
-  avatar: true,
-  isOnline: true,
-  lastSeen: true,
-  createdAt: true,
-};
+const { ok } = require('../utils/apiResponse');
+const { USER_SELECT } = require('../constants');
 
 // GET /api/users/profile
 const getProfile = async (req, res, next) => {
   try {
     const { password, ...user } = req.user;
-    res.status(200).json({ user });
+    return ok(res, { user });
   } catch (error) {
     next(error);
   }
@@ -36,7 +28,7 @@ const searchUsers = async (req, res, next) => {
       select: USER_SELECT,
     });
 
-    res.status(200).json({ users });
+    return ok(res, { users });
   } catch (error) {
     next(error);
   }
@@ -47,16 +39,17 @@ const updateProfile = async (req, res, next) => {
   try {
     const { name, avatar } = req.body;
 
-    const updatedUser = await prisma.user.update({
+    const user = await prisma.user.update({
       where: { id: req.user.id },
       data: { name, avatar },
       select: USER_SELECT,
     });
 
-    res.status(200).json({ user: updatedUser });
+    return ok(res, { user });
   } catch (error) {
     next(error);
   }
 };
 
 module.exports = { getProfile, searchUsers, updateProfile };
+

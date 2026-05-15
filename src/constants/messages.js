@@ -44,7 +44,11 @@ const MESSAGE = {
   CHAT_ID_REQUIRED:           'chatId is required',
   CONTENT_OR_FILE_REQUIRED:   'Message content or file is required',
   CHAT_NOT_FOUND:             'Chat not found',
+  MESSAGE_NOT_FOUND:          'Message not found',
+  NOT_YOUR_MESSAGE:           'You can only delete your own messages',
+  MESSAGE_DELETED:            'Message deleted',
   MESSAGES_READ:              'Messages marked as read',
+  FILE_TYPE_NOT_ALLOWED:      'File type not allowed',
 };
 
 const UPLOAD = {

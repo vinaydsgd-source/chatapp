@@ -46,6 +46,21 @@ const socketHandler = (io) => {
       socket.to(chatId).emit('read_receipt', { chatId, userId });
     });
 
+    socket.on('delete_message', async ({ messageId }) => {
+      try {
+        const message = await prisma.message.findUnique({ where: { id: messageId } });
+
+        if (!message) return socket.emit('error', { message: 'Message not found' });
+        if (message.senderId !== userId) return socket.emit('error', { message: 'You can only delete your own messages' });
+
+        await prisma.message.delete({ where: { id: messageId } });
+
+        io.to(message.chatId).emit('message_deleted', { messageId, chatId: message.chatId });
+      } catch (err) {
+        socket.emit('error', { message: 'Failed to delete message' });
+      }
+    });
+
     socket.on('disconnect', async () => {
       await prisma.user.update({
         where: { id: userId },

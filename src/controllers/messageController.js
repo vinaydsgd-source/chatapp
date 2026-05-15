@@ -1,7 +1,7 @@
 const prisma = require('../config/db');
 const { uploadToCloudinary } = require('../utils/cloudUpload');
 const { getIO } = require('../config/socket');
-const { ok, created, badRequest, notFound } = require('../utils/apiResponse');
+const { ok, created, badRequest, notFound, forbidden } = require('../utils/apiResponse');
 const { MESSAGE } = require('../constants/messages');
 const { MESSAGE_INCLUDE, IMAGE_MIME_TYPES, MESSAGE_PAGE_LIMIT, MESSAGE_PAGE_MAX } = require('../constants');
 
@@ -143,4 +143,28 @@ const markAsRead = async (req, res, next) => {
   }
 };
 
-module.exports = { sendMessage, getMessages, markAsRead };
+// DELETE /api/messages/:messageId
+const deleteMessage = async (req, res, next) => {
+  try {
+    const { messageId } = req.params;
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      include: { sender: { select: { id: true } } },
+    });
+
+    if (!message) return notFound(res, MESSAGE.MESSAGE_NOT_FOUND);
+    if (message.senderId !== req.user.id) return forbidden(res, MESSAGE.NOT_YOUR_MESSAGE);
+
+    await prisma.message.delete({ where: { id: messageId } });
+
+    const io = getIO();
+    if (io) io.to(message.chatId).emit('message_deleted', { messageId, chatId: message.chatId });
+
+    return ok(res, { message: MESSAGE.MESSAGE_DELETED, messageId });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { sendMessage, getMessages, markAsRead, deleteMessage };

@@ -1,5 +1,5 @@
 const express = require('express');
-const { sendMessage, getMessages, markAsRead } = require('../controllers/messageController');
+const { sendMessage, getMessages, markAsRead, deleteMessage } = require('../controllers/messageController');
 const { protect } = require('../middlewares/authMiddleware');
 const upload = require('../middlewares/uploadMiddleware');
 
@@ -156,5 +156,41 @@ router.get('/:chatId', getMessages);
  *         $ref: '#/components/responses/Unauthorized'
  */
 router.put('/read/:chatId', markAsRead);
+
+/**
+ * @swagger
+ * /api/messages/{messageId}:
+ *   delete:
+ *     summary: Delete a message (sender only)
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Message deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Message deleted
+ *                 messageId:
+ *                   type: string
+ *       403:
+ *         description: Not your message
+ *       404:
+ *         description: Message not found
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+router.delete('/:messageId', deleteMessage);
 
 module.exports = router;
